@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Secure Local SQL Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fas fa-shield-alt me-2"></i>
+                Secure SQL Chatbot
+            </a>
+            <div class="navbar-nav ms-auto">
+                <button class="btn btn-outline-light btn-sm" id="schemaBtn">
+                    <i class="fas fa-database me-1"></i> Schema
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid h-100">
+        <div class="row h-100">
+            <!-- Main Chat Area -->
+            <div class="col-md-8 d-flex flex-column chat-container">
+                <!-- Chat Header -->
+                <div class="chat-header p-3 border-bottom bg-light">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator online me-3"></div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">SQL Query Assistant</h6>
+                            <small class="text-muted">Ask questions in natural language</small>
+                        </div>
+                        <div class="ms-auto">
+                            <span class="badge bg-success" id="connectionStatus">
+                                <i class="fas fa-check-circle me-1"></i> Connected
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Messages Area -->
+                <div class="chat-messages flex-grow-1 p-3" id="chatMessages">
+                    <!-- Welcome Message -->
+                    <div class="message-wrapper mb-3">
+                        <div class="message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <div class="message-bubble">
+                                    <p class="mb-2">👋 <strong>Welcome to Secure Local SQL Chatbot!</strong></p>
+                                    <p class="mb-2">I can help you query the database using natural language. Here are some examples:</p>
+                                    <div class="example-queries">
+                                        <div class="example-query" onclick="sendExampleQuery(this)">
+                                            <i class="fas fa-users me-2"></i>Show all active customers
+                                        </div>
+                                        <div class="example-query" onclick="sendExampleQuery(this)">
+                                            <i class="fas fa-chart-bar me-2"></i>How many orders were placed this year?
+                                        </div>
+                                        <div class="example-query" onclick="sendExampleQuery(this)">
+                                            <i class="fas fa-dollar-sign me-2"></i>What's the total revenue from electronics?
+                                        </div>
+                                        <div class="example-query" onclick="sendExampleQuery(this)">
+                                            <i class="fas fa-trophy me-2"></i>Top 5 customers by order value
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="message-time">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        System startup
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Input Area -->
+                <div class="chat-input-container p-3 border-top bg-light">
+                    <form id="chatForm" class="d-flex align-items-center">
+                        <div class="input-group">
+                            <input type="text" id="messageInput" class="form-control form-control-lg" 
+                                   placeholder="Ask me anything about the database..." 
+                                   autocomplete="off" required>
+                            <button type="submit" class="btn btn-primary btn-lg" id="sendBtn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Ask questions like: "Show customers from New York" or "Count orders by status"
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-4 sidebar bg-light border-start">
+                <div class="sidebar-header p-3 border-bottom">
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Query Information
+                    </h6>
+                </div>
+                
+                <div class="sidebar-content p-3">
+                    <!-- Database Stats -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-database me-2"></i>Database Overview
+                            </h6>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-number" id="tableCount">4</div>
+                                        <div class="stat-label">Tables</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-item">
+                                        <div class="stat-number" id="queryCount">0</div>
+                                        <div class="stat-label">Queries</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Last SQL Query -->
+                    <div class="card mb-3" id="sqlQueryCard" style="display: none;">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-code me-2"></i>Generated SQL
+                            </h6>
+                            <div class="sql-code-container">
+                                <pre><code class="language-sql" id="lastSqlQuery"></code></pre>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary mt-2" onclick="copySqlQuery()">
+                                <i class="fas fa-copy me-1"></i>Copy SQL
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Security Info -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title text-success">
+                                <i class="fas fa-shield-alt me-2"></i>Security Features
+                            </h6>
+                            <ul class="list-unstyled security-features">
+                                <li><i class="fas fa-check text-success me-2"></i>SELECT-only queries</li>
+                                <li><i class="fas fa-check text-success me-2"></i>SQL injection protection</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Local database only</li>
+                                <li><i class="fas fa-check text-success me-2"></i>No data persistence of queries</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Sample Queries -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-lightbulb me-2"></i>Sample Queries
+                            </h6>
+                            <div class="sample-queries">
+                                <div class="sample-query" onclick="sendExampleQuery(this)">
+                                    List all products in Electronics category
+                                </div>
+                                <div class="sample-query" onclick="sendExampleQuery(this)">
+                                    Show pending orders with customer details
+                                </div>
+                                <div class="sample-query" onclick="sendExampleQuery(this)">
+                                    Average order value by month
+                                </div>
+                                <div class="sample-query" onclick="sendExampleQuery(this)">
+                                    Customers who haven't placed orders
+                                </div>
+                                <div class="sample-query" onclick="sendExampleQuery(this)">
+                                    Top selling products by quantity
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schema Modal -->
+    <div class="modal fade" id="schemaModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-database me-2"></i>Database Schema
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="schemaContent">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
